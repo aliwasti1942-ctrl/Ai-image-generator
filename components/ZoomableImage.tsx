@@ -1,0 +1,126 @@
+import React, { useState, useEffect } from 'react';
+import { Icons } from './Icon';
+
+interface ZoomableImageProps {
+  src: string;
+  alt?: string;
+  className?: string;
+}
+
+export const ZoomableImage: React.FC<ZoomableImageProps> = ({ src, alt, className = '' }) => {
+  const [scale, setScale] = useState(1);
+  const [position, setPosition] = useState({ x: 0, y: 0 });
+  const [isDragging, setIsDragging] = useState(false);
+  const [dragStart, setDragStart] = useState({ x: 0, y: 0 });
+  
+  // Reset state when source changes
+  useEffect(() => {
+    setScale(1);
+    setPosition({ x: 0, y: 0 });
+  }, [src]);
+
+  const handleWheel = (e: React.WheelEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    const delta = -e.deltaY * 0.002;
+    const newScale = Math.min(Math.max(1, scale + delta), 8);
+    
+    setScale(newScale);
+    
+    // Reset position if zoomed out completely
+    if (newScale === 1) {
+      setPosition({ x: 0, y: 0 });
+    }
+  };
+
+  const handleMouseDown = (e: React.MouseEvent) => {
+    if (scale > 1) {
+      e.preventDefault();
+      setIsDragging(true);
+      setDragStart({ x: e.clientX - position.x, y: e.clientY - position.y });
+    }
+  };
+
+  const handleMouseMove = (e: React.MouseEvent) => {
+    if (isDragging && scale > 1) {
+      e.preventDefault();
+      setPosition({
+        x: e.clientX - dragStart.x,
+        y: e.clientY - dragStart.y
+      });
+    }
+  };
+
+  const handleMouseUp = () => setIsDragging(false);
+
+  const zoomIn = () => setScale(s => Math.min(s + 0.5, 8));
+  const zoomOut = () => {
+    setScale(s => {
+      const next = Math.max(1, s - 0.5);
+      if (next === 1) setPosition({ x: 0, y: 0 });
+      return next;
+    });
+  };
+  const reset = () => {
+    setScale(1);
+    setPosition({ x: 0, y: 0 });
+  };
+
+  return (
+    <div 
+      className={`relative w-full h-full flex items-center justify-center overflow-hidden touch-none group ${className} ${scale > 1 ? 'cursor-grab active:cursor-grabbing' : ''}`}
+      onWheel={handleWheel}
+      onMouseDown={handleMouseDown}
+      onMouseMove={handleMouseMove}
+      onMouseUp={handleMouseUp}
+      onMouseLeave={handleMouseUp}
+    >
+      <img 
+        src={src} 
+        alt={alt}
+        draggable={false}
+        style={{
+          transform: `translate(${position.x}px, ${position.y}px) scale(${scale})`,
+          transition: isDragging ? 'none' : 'transform 0.15s cubic-bezier(0.4, 0, 0.2, 1)',
+          maxWidth: '90%',
+          maxHeight: '90%'
+        }}
+        className="object-contain select-none rounded-lg shadow-2xl pointer-events-none" 
+      />
+
+      {/* Floating Zoom Controls */}
+      <div 
+        className="absolute bottom-6 left-1/2 -translate-x-1/2 flex items-center gap-1 p-1.5 bg-black/60 backdrop-blur-md rounded-full border border-white/10 shadow-xl z-30 transition-opacity duration-200 opacity-0 group-hover:opacity-100"
+        onClick={e => e.stopPropagation()}
+      >
+        <button 
+          onClick={zoomOut} 
+          className="p-1.5 rounded-full hover:bg-white/10 text-gray-300 hover:text-white transition-colors disabled:opacity-50 disabled:cursor-not-allowed" 
+          disabled={scale <= 1}
+          title="Zoom Out"
+        >
+          <Icons.Minus className="w-4 h-4" />
+        </button>
+        <span className="text-xs font-mono text-gray-300 w-10 text-center select-none">
+          {Math.round(scale * 100)}%
+        </span>
+        <button 
+          onClick={zoomIn} 
+          className="p-1.5 rounded-full hover:bg-white/10 text-gray-300 hover:text-white transition-colors disabled:opacity-50 disabled:cursor-not-allowed" 
+          disabled={scale >= 8}
+          title="Zoom In"
+        >
+          <Icons.Plus className="w-4 h-4" />
+        </button>
+        <div className="w-px h-4 bg-white/10 mx-1"></div>
+        <button 
+          onClick={reset} 
+          className="p-1.5 rounded-full hover:bg-white/10 text-gray-300 hover:text-yellow-400 transition-colors" 
+          title="Reset View"
+        >
+          <Icons.RotateCcw className="w-4 h-4" />
+        </button>
+      </div>
+    </div>
+  );
+};
