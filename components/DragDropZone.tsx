@@ -11,23 +11,6 @@ export const DragDropZone: React.FC<DragDropZoneProps> = ({ onImagesChange, curr
   const [isDragging, setIsDragging] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
-  const handleDragEnter = useCallback((e: React.DragEvent) => {
-    e.preventDefault();
-    e.stopPropagation();
-    setIsDragging(true);
-  }, []);
-
-  const handleDragLeave = useCallback((e: React.DragEvent) => {
-    e.preventDefault();
-    e.stopPropagation();
-    setIsDragging(false);
-  }, []);
-
-  const handleDragOver = useCallback((e: React.DragEvent) => {
-    e.preventDefault();
-    e.stopPropagation();
-  }, []);
-
   const processFiles = useCallback((files: FileList | File[]) => {
     const newImages: ImageState[] = [];
     const filesArray = Array.from(files);
@@ -37,11 +20,7 @@ export const DragDropZone: React.FC<DragDropZoneProps> = ({ onImagesChange, curr
 
     filesArray.forEach(file => {
       if (!file.type.startsWith('image/')) {
-        // Skip non-image files
         processedCount++;
-        if (processedCount === filesArray.length && newImages.length > 0) {
-             onImagesChange([...currentImages, ...newImages]);
-        }
         return;
       }
 
@@ -53,7 +32,6 @@ export const DragDropZone: React.FC<DragDropZoneProps> = ({ onImagesChange, curr
           mimeType: file.type
         });
         processedCount++;
-
         if (processedCount === filesArray.length) {
           onImagesChange([...currentImages, ...newImages]);
         }
@@ -62,163 +40,68 @@ export const DragDropZone: React.FC<DragDropZoneProps> = ({ onImagesChange, curr
     });
   }, [currentImages, onImagesChange]);
 
-  // Handle global paste events
-  useEffect(() => {
-    const handlePaste = (e: ClipboardEvent) => {
-      if (e.clipboardData && e.clipboardData.items) {
-        const items = e.clipboardData.items;
-        const filesToProcess: File[] = [];
-        for (let i = 0; i < items.length; i++) {
-          if (items[i].type.indexOf('image') !== -1) {
-            const blob = items[i].getAsFile();
-            if (blob) filesToProcess.push(blob);
-          }
-        }
-        if (filesToProcess.length > 0) {
-           e.preventDefault();
-           processFiles(filesToProcess);
-        }
-      }
-    };
-
-    window.addEventListener('paste', handlePaste);
-    return () => {
-      window.removeEventListener('paste', handlePaste);
-    };
-  }, [processFiles]);
-
-  const handleDrop = useCallback((e: React.DragEvent) => {
+  const handleDragEnter = (e: React.DragEvent) => { e.preventDefault(); setIsDragging(true); };
+  const handleDragLeave = (e: React.DragEvent) => { e.preventDefault(); setIsDragging(false); };
+  const handleDrop = (e: React.DragEvent) => {
     e.preventDefault();
-    e.stopPropagation();
     setIsDragging(false);
-
-    if (e.dataTransfer.files && e.dataTransfer.files.length > 0) {
-      processFiles(e.dataTransfer.files);
-    }
-  }, [processFiles]);
-
-  const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
-    if (e.target.files && e.target.files.length > 0) {
-      processFiles(e.target.files);
-    }
-    // Reset value so same file can be selected again if needed
-    if (e.target.value) e.target.value = '';
+    if (e.dataTransfer.files) processFiles(e.dataTransfer.files);
   };
 
-  const handleRemove = (e: React.MouseEvent, index: number) => {
-    e.stopPropagation();
-    const newImages = [...currentImages];
-    newImages.splice(index, 1);
-    onImagesChange(newImages);
+  const removeImage = (index: number) => {
+    const next = [...currentImages];
+    next.splice(index, 1);
+    onImagesChange(next);
   };
 
-  const clearAll = () => {
-    onImagesChange([]);
-  };
-
-  const triggerFileSelect = () => {
-    fileInputRef.current?.click();
-  };
-
-  // Render List View if images exist
   if (currentImages.length > 0) {
     return (
-      <div className="w-full">
-         <div className="grid grid-cols-3 sm:grid-cols-4 gap-3 mb-2">
-            {currentImages.map((img, idx) => (
-               <div key={idx} className="relative group aspect-square rounded-xl overflow-hidden border border-gray-700 bg-gray-900 shadow-md">
-                  <img 
-                    src={img.data} 
-                    alt={`Reference ${idx + 1}`} 
-                    className="w-full h-full object-cover transition-opacity group-hover:opacity-90"
-                  />
-                  <div className="absolute inset-0 bg-black/0 group-hover:bg-black/20 transition-colors" />
-                  <button 
-                    onClick={(e) => handleRemove(e, idx)} 
-                    className="absolute top-1.5 right-1.5 bg-black/60 backdrop-blur-sm p-1 rounded-full text-white opacity-0 group-hover:opacity-100 transition-all hover:bg-red-500/80"
-                    title="Remove image"
-                  >
-                     <Icons.X className="w-3 h-3" />
-                  </button>
-               </div>
-            ))}
-            
-            {/* Add More Button */}
-            <div
-              onClick={triggerFileSelect}
-              onDragEnter={handleDragEnter}
-              onDragLeave={handleDragLeave}
-              onDragOver={handleDragOver}
-              onDrop={handleDrop}
-              className={`
-                aspect-square rounded-xl border-2 border-dashed flex flex-col items-center justify-center cursor-pointer transition-all gap-1
-                ${isDragging 
-                  ? 'border-yellow-400 bg-yellow-400/10' 
-                  : 'border-gray-700 bg-gray-900/50 hover:border-gray-500 hover:bg-gray-800'}
-              `}
-            >
-               <Icons.Plus className="w-6 h-6 text-gray-500" />
-               <span className="text-xs text-gray-500 font-medium">Add</span>
+      <div className="w-full space-y-4">
+        <div className="grid grid-cols-4 gap-2">
+          {currentImages.map((img, idx) => (
+            <div key={idx} className="relative aspect-square rounded-2xl overflow-hidden border border-white/10 bg-white/5 group">
+              <img src={img.data} className="w-full h-full object-cover" />
+              <button 
+                onClick={() => removeImage(idx)}
+                className="absolute top-1 right-1 bg-black/50 p-1.5 rounded-full opacity-0 group-hover:opacity-100 transition-opacity backdrop-blur-md"
+              >
+                <Icons.X className="w-3 h-3 text-white" />
+              </button>
             </div>
-         </div>
-         
-         <div className="flex justify-between items-center px-1">
-            <span className="text-xs text-gray-500">{currentImages.length} image{currentImages.length !== 1 ? 's' : ''} loaded</span>
-            <button 
-              onClick={clearAll} 
-              className="text-xs text-red-400 hover:text-red-300 flex items-center gap-1 transition-colors"
-            >
-               <Icons.Trash2 className="w-3 h-3" /> Clear All
-            </button>
-         </div>
-         <input 
-            type="file" 
-            ref={fileInputRef} 
-            className="hidden" 
-            accept="image/*"
-            multiple
-            onChange={handleFileSelect}
-          />
+          ))}
+          <button 
+            onClick={() => fileInputRef.current?.click()}
+            className="aspect-square rounded-2xl border border-dashed border-white/20 bg-white/5 flex items-center justify-center hover:bg-white/10 transition-colors"
+          >
+            <Icons.Plus className="w-6 h-6 text-white/30" />
+          </button>
+        </div>
+        <input ref={fileInputRef} type="file" className="hidden" accept="image/*" multiple onChange={(e) => e.target.files && processFiles(e.target.files)} />
       </div>
     );
   }
 
-  // Render Empty State
   return (
     <div
-      onClick={triggerFileSelect}
+      onClick={() => fileInputRef.current?.click()}
       onDragEnter={handleDragEnter}
       onDragLeave={handleDragLeave}
-      onDragOver={handleDragOver}
+      onDragOver={(e) => e.preventDefault()}
       onDrop={handleDrop}
       className={`
-        w-full h-64 rounded-2xl border-2 border-dashed transition-all duration-300 cursor-pointer flex flex-col items-center justify-center gap-4
+        w-full h-40 rounded-[2rem] border border-dashed transition-all duration-500 cursor-pointer flex flex-col items-center justify-center gap-3
         ${isDragging 
-          ? 'border-yellow-400 bg-yellow-400/5 shadow-[0_0_30px_rgba(250,204,21,0.15)]' 
-          : 'border-gray-700 bg-gray-900/50 hover:border-gray-500 hover:bg-gray-800/50'}
+          ? 'border-yellow-400 bg-yellow-400/5 shadow-[0_0_40px_rgba(250,204,21,0.1)]' 
+          : 'border-white/10 bg-white/5 hover:border-white/20 hover:bg-white/[0.08]'}
       `}
     >
-      <input 
-        type="file" 
-        ref={fileInputRef} 
-        className="hidden" 
-        accept="image/*"
-        multiple
-        onChange={handleFileSelect}
-      />
-      
-      <div className={`p-4 rounded-full ${isDragging ? 'bg-yellow-400/10 text-yellow-400' : 'bg-gray-800 text-gray-400'}`}>
-        <Icons.Upload className="w-8 h-8" />
+      <input ref={fileInputRef} type="file" className="hidden" accept="image/*" multiple onChange={(e) => e.target.files && processFiles(e.target.files)} />
+      <div className={`w-12 h-12 rounded-full flex items-center justify-center transition-all ${isDragging ? 'bg-yellow-400 text-black' : 'bg-white/10 text-white/40'}`}>
+        <Icons.Upload className="w-5 h-5" />
       </div>
-      
-      <div className="text-center px-4">
-        <p className={`text-lg font-medium ${isDragging ? 'text-yellow-400' : 'text-gray-200'}`}>
-          Drop reference images here
-        </p>
-        <p className="text-sm text-gray-500 mt-1">
-          or click to upload multiple files
-        </p>
-      </div>
+      <p className={`text-[10px] font-bold uppercase tracking-[0.2em] ${isDragging ? 'text-yellow-400' : 'text-white/30'}`}>
+        Import Texture
+      </p>
     </div>
   );
 };

@@ -6,6 +6,9 @@ const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
 
 const MODEL_NAME = 'gemini-2.5-flash-image';
 
+// List of officially supported aspect ratios for the imageConfig property
+const SUPPORTED_ASPECT_RATIOS = ["1:1", "2:3", "3:2", "3:4", "4:3", "4:5", "5:4", "9:16", "16:9", "21:9"];
+
 interface GenerateOptions {
   prompt: string;
   sourceImages?: {
@@ -42,13 +45,12 @@ export const generateOrEditImage = async ({
     }
 
     // Enhance prompt to ensure image generation
-    // If it's a pure text prompt (no source), we explicitly ask for an image if not already stated.
     let finalPrompt = prompt;
+
     if (!sourceImages || sourceImages.length === 0) {
         const lowerPrompt = prompt.toLowerCase();
-        // If the prompt doesn't explicitly ask to generate/create/image, prepend it.
         if (!lowerPrompt.includes('generate') && !lowerPrompt.includes('create') && !lowerPrompt.includes('image')) {
-            finalPrompt = `Generate an image of ${prompt}`;
+            finalPrompt = `Generate an image of ${finalPrompt}`;
         }
     }
 
@@ -57,6 +59,16 @@ export const generateOrEditImage = async ({
       text: finalPrompt,
     });
 
+    // Handle unsupported aspect ratios by mapping them and using text guidance
+    const isSpecialRatio = !SUPPORTED_ASPECT_RATIOS.includes(aspectRatio);
+    const configRatio = isSpecialRatio ? "21:9" : aspectRatio;
+    
+    let systemInstruction = "You are an advanced image generation model. Your task is to generate or edit images based on the user's prompt. Do not output text descriptions; always generate the requested image.";
+    
+    if (isSpecialRatio) {
+      systemInstruction += ` Special formatting request: The user wants an ultra-wide panoramic aspect ratio of ${aspectRatio}. Since the canvas is limited to 21:9, ensure the composition is cinematic and uses the full horizontal width for an ultra-wide feel.`;
+    }
+
     // Call the model
     const response = await ai.models.generateContent({
       model: MODEL_NAME,
@@ -64,18 +76,14 @@ export const generateOrEditImage = async ({
         parts: parts,
       },
       config: {
-        // Note: responseMimeType and responseSchema are NOT supported for this model
-        // imageConfig is supported for generation config
         imageConfig: {
-           aspectRatio: aspectRatio
+           aspectRatio: configRatio as any
         },
-        // System instruction to strictly enforce image generation behavior
-        systemInstruction: "You are an advanced image generation model. Your task is to generate or edit images based on the user's prompt. Do not output text descriptions; always generate the requested image."
+        systemInstruction: systemInstruction
       },
     });
 
     // Parse the response to find the image
-    // The model might return text (e.g., refusal or explanation) or inlineData (the image)
     if (response.candidates && response.candidates.length > 0) {
       const content = response.candidates[0].content;
       if (content && content.parts) {
@@ -84,10 +92,8 @@ export const generateOrEditImage = async ({
             return `data:${part.inlineData.mimeType};base64,${part.inlineData.data}`;
           }
         }
-        // If no image found, check for text to throw a useful error
         for (const part of content.parts) {
           if (part.text) {
-            // Log the text for debugging
             console.warn("Model returned text instead of image:", part.text);
             throw new Error(`Model returned text instead of image: ${part.text}`);
           }

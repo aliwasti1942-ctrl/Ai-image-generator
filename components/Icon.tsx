@@ -13,7 +13,9 @@ import {
   RotateCcw,
   Plus,
   Minus,
-  Maximize
+  Maximize,
+  Copy,
+  Check
 } from 'lucide-react';
 
 // Re-exporting specifically to avoid clutter in main files
@@ -31,5 +33,7 @@ export const Icons = {
   RotateCcw,
   Plus,
   Minus,
-  Maximize
+  Maximize,
+  Copy,
+  Check
 };

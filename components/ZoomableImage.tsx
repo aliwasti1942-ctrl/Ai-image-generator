@@ -1,4 +1,5 @@
-import React, { useState, useEffect } from 'react';
+
+import React, { useState, useEffect, useRef } from 'react';
 import { Icons } from './Icon';
 
 interface ZoomableImageProps {
@@ -12,6 +13,9 @@ export const ZoomableImage: React.FC<ZoomableImageProps> = ({ src, alt, classNam
   const [position, setPosition] = useState({ x: 0, y: 0 });
   const [isDragging, setIsDragging] = useState(false);
   const [dragStart, setDragStart] = useState({ x: 0, y: 0 });
+  const [showHint, setShowHint] = useState(false);
+  const containerRef = useRef<HTMLDivElement>(null);
+  const hintTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   
   // Reset state when source changes
   useEffect(() => {
@@ -19,19 +23,42 @@ export const ZoomableImage: React.FC<ZoomableImageProps> = ({ src, alt, classNam
     setPosition({ x: 0, y: 0 });
   }, [src]);
 
-  const handleWheel = (e: React.WheelEvent) => {
-    e.preventDefault();
-    e.stopPropagation();
-    const delta = -e.deltaY * 0.002;
-    const newScale = Math.min(Math.max(1, scale + delta), 8);
-    
-    setScale(newScale);
-    
-    // Reset position if zoomed out completely
-    if (newScale === 1) {
-      setPosition({ x: 0, y: 0 });
-    }
-  };
+  // Use a manual DOM listener to handle the wheel event.
+  // This is necessary because React's onWheel is passive by default in modern browsers,
+  // making preventDefault() ineffective for stopping native browser zoom.
+  useEffect(() => {
+    const container = containerRef.current;
+    if (!container) return;
+
+    const handleWheel = (e: WheelEvent) => {
+      // If Ctrl is held, we handle custom zoom and MUST block browser zoom
+      if (e.ctrlKey) {
+        e.preventDefault();
+        e.stopPropagation();
+        
+        const delta = -e.deltaY * 0.002;
+        // Limit scale between 1x and 8x
+        setScale(prev => {
+          const next = Math.min(Math.max(1, prev + delta), 8);
+          if (next === 1) setPosition({ x: 0, y: 0 });
+          return next;
+        });
+      } else {
+        // No Ctrl key: Let the page scroll naturally
+        if (scale === 1) {
+          setShowHint(true);
+          if (hintTimeoutRef.current) clearTimeout(hintTimeoutRef.current);
+          hintTimeoutRef.current = setTimeout(() => setShowHint(false), 2000);
+        }
+      }
+    };
+
+    // { passive: false } is the key to making preventDefault() work
+    container.addEventListener('wheel', handleWheel, { passive: false });
+    return () => {
+      container.removeEventListener('wheel', handleWheel);
+    };
+  }, [scale]);
 
   const handleMouseDown = (e: React.MouseEvent) => {
     if (scale > 1) {
@@ -68,8 +95,8 @@ export const ZoomableImage: React.FC<ZoomableImageProps> = ({ src, alt, classNam
 
   return (
     <div 
-      className={`relative w-full h-full flex items-center justify-center overflow-hidden touch-none group ${className} ${scale > 1 ? 'cursor-grab active:cursor-grabbing' : ''}`}
-      onWheel={handleWheel}
+      ref={containerRef}
+      className={`relative w-full h-full flex items-center justify-center overflow-hidden touch-none group checkerboard-bg ${className} ${scale > 1 ? 'cursor-grab active:cursor-grabbing' : ''}`}
       onMouseDown={handleMouseDown}
       onMouseMove={handleMouseMove}
       onMouseUp={handleMouseUp}
@@ -87,6 +114,15 @@ export const ZoomableImage: React.FC<ZoomableImageProps> = ({ src, alt, classNam
         }}
         className="object-contain select-none rounded-lg shadow-2xl pointer-events-none" 
       />
+
+      {/* Modifier Key Hint */}
+      {showHint && scale === 1 && (
+        <div className="absolute inset-0 flex items-center justify-center pointer-events-none z-40">
+          <div className="bg-black/70 backdrop-blur-md px-4 py-2 rounded-full border border-white/10 text-xs text-white animate-in fade-in zoom-in duration-300">
+            Use <kbd className="bg-gray-700 px-1.5 py-0.5 rounded border border-gray-600 text-[10px]">Ctrl</kbd> + Scroll to zoom
+          </div>
+        </div>
+      )}
 
       {/* Floating Zoom Controls */}
       <div 

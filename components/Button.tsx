@@ -16,13 +16,13 @@ export const Button: React.FC<ButtonProps> = ({
   ...props 
 }) => {
   
-  const baseStyles = "inline-flex items-center justify-center px-4 py-3 rounded-xl font-medium transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-offset-gray-900";
+  const baseStyles = "inline-flex items-center justify-center px-6 py-3.5 rounded-full font-semibold transition-all duration-300 disabled:opacity-40 disabled:cursor-not-allowed focus:outline-none tracking-tight";
   
   const variants = {
-    primary: "bg-yellow-400 hover:bg-yellow-300 text-black focus:ring-yellow-400 shadow-[0_0_20px_rgba(250,204,21,0.3)] hover:shadow-[0_0_30px_rgba(250,204,21,0.5)]",
-    secondary: "bg-gray-800 hover:bg-gray-700 text-white border border-gray-700 focus:ring-gray-500",
-    danger: "bg-red-500/10 hover:bg-red-500/20 text-red-400 hover:text-red-300 border border-red-500/30 focus:ring-red-500",
-    ghost: "bg-transparent hover:bg-gray-800 text-gray-400 hover:text-white"
+    primary: "bg-yellow-400 text-black hover:bg-yellow-300 shadow-[0_10px_30px_-5px_rgba(250,204,21,0.4)] active:scale-[0.97]",
+    secondary: "bg-white/5 hover:bg-white/10 text-white border border-white/10 backdrop-blur-md active:scale-[0.97]",
+    danger: "bg-red-500/10 hover:bg-red-500/20 text-red-400 border border-red-500/20 active:scale-[0.97]",
+    ghost: "bg-transparent hover:bg-white/5 text-gray-400 hover:text-white"
   };
 
   return (
@@ -39,7 +39,7 @@ export const Button: React.FC<ButtonProps> = ({
           </svg>
         </span>
       ) : icon ? (
-        <span className="mr-2">{icon}</span>
+        <span className="mr-2.5">{icon}</span>
       ) : null}
       {children}
     </button>

@@ -11,4 +11,4 @@ export interface ImageState {
   mimeType: string;
 }
 
-export type AspectRatio = "1:1" | "3:4" | "4:3" | "16:9" | "9:16" | "9:21" | "21:9" | "3:2" | "2:3";
+export type AspectRatio = "1:1" | "2:3" | "3:2" | "3:4" | "4:3" | "4:5" | "5:4" | "9:16" | "16:9" | "21:9" | "10:1" | "3:1";

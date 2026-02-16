@@ -1,5 +1,5 @@
 {
-  "name": "Nano Banana Studio",
-  "description": "A cutting-edge, web-based image generation and editing platform powered by the Gemini 2.5 Flash Image model (Nano Banana). Features seamless Text-to-Image and Image-to-Image capabilities.",
+  "name": "Wasti Image Studio",
+  "description": "A cutting-edge, web-based image generation and editing platform powered by the Gemini 2.5 Flash Image model. Features seamless Text-to-Image and Image-to-Image capabilities.",
   "requestFramePermissions": []
 }
